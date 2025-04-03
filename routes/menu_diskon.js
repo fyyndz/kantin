@@ -1,17 +1,14 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const menuDiskonController = require('../controllers/menu_diskon.controller');
-const adminStanMiddleware = require("../middleware/middleware");
+const menuDiskonController = require("../controllers/menu_diskon.controller");
+const { authenticate, authorize } = require("../middleware/auth");
 
-router.get('/', menuDiskonController.getAllMenuDiskon);
+router.get("/", menuDiskonController.getAllMenuDiskon);
+router.get("/search/:key", menuDiskonController.findMenuDiskon);
 
-router.get('/search/:key', menuDiskonController.findMenuDiskon);
-
-router.post('/', adminStanMiddleware, menuDiskonController.addMenuDiskon);
-
-router.put('/:id', adminStanMiddleware, menuDiskonController.updateMenuDiskon);
-
-router.delete('/:id', adminStanMiddleware, menuDiskonController.deleteMenuDiskon);
+router.post("/", authenticate, authorize("admin_stan"), menuDiskonController.addMenuDiskon);
+router.put("/:id", authenticate, authorize("admin_stan"), menuDiskonController.updateMenuDiskon);
+router.delete("/:id", authenticate, authorize("admin_stan"), menuDiskonController.deleteMenuDiskon);
 
 module.exports = router;

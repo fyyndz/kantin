@@ -1,17 +1,14 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const siswaController = require('../controllers/siswa.controller');
-const adminStanMiddleware = require("../middleware/middleware");
+const siswaController = require("../controllers/siswa.controller");
+const { authenticate, authorize } = require("../middleware/auth");
 
-router.get('/', siswaController.getAllSiswa);
+router.get("/", siswaController.getAllSiswa);
+router.get("/search/:key", siswaController.findSiswa);
 
-router.get('/search/:key', siswaController.findSiswa);
-
-router.post('/', adminStanMiddleware, siswaController.addSiswa);
-
-router.put('/:id', adminStanMiddleware, siswaController.updateSiswa);
-
-router.delete('/:id', adminStanMiddleware, siswaController.deleteSiswa);
+router.post("/", authenticate, authorize("admin_stan"), siswaController.addSiswa);
+router.put("/:id", authenticate, authorize("admin_stan"), siswaController.updateSiswa);
+router.delete("/:id", authenticate, authorize("admin_stan"), siswaController.deleteSiswa);
 
 module.exports = router;
