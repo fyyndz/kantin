@@ -1,34 +1,32 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const userModel = require('../models/user');
+const { db } = require('../config/prismaClient');
+require('dotenv').config()
 
-exports.login = async (req, res) => {
+async function login(req, res) {
     try {
         const { email, password } = req.body;
-        
-        // Find user by email
-        const user = await userModel.findOne({ where: { email } });
+
+        const user = await db.user.findUnique({ where: { email } });
         if (!user) {
-            return res.status(401).json({ 
+            return res.status(401).json({
                 success: false,
-                message: 'Authentication failed' 
+                message: 'Authentication failed'
             });
         }
 
-        // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(401).json({ 
+            return res.status(401).json({
                 success: false,
-                message: 'Authentication failed' 
+                message: 'Authentication failed'
             });
         }
 
-        // Create JWT token
         const token = jwt.sign(
-            { 
+            {
                 userId: user.userID,
-                role: user.role 
+                role: user.role
             },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
@@ -42,9 +40,50 @@ exports.login = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: error.message 
+            message: error.message
         });
     }
-};
+}
+
+async function register(req, res) {
+    try {
+        const { email, password, role } = req.body;
+
+        const existingUser = await db.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'User already exists'
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await db.user.create({
+            data: {
+                email,
+                password: hashedPassword,
+                role
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'User registered successfully',
+            userId: newUser.userID,
+            role: newUser.role
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+module.exports = {
+  login, register
+}

@@ -1,104 +1,112 @@
-const stanModel = require(`../models/index`).user
-const { request,response } = require("express")
-const stan = require("../models/siswa")
-const { where } = require("sequelize")
-const Op = require(`sequelize`).Op
+const { db } = require('../config/prismaClient');
 
-exports.getAllStan = async (request, response) => {
-
-    let stan = await stanModel.findAll()
-    return response.json({
-        success: true,
-        data: siswa,
-        message: `All stan have been loaded`
-    })
+async function getAllStan(req, res) {
+  try {
+    const stan = await db.user.findMany();
+    res.json({
+      success: true,
+      data: stan,
+      message: 'All stan have been loaded',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.findStan = async (request, response) => {
-    let keyword = request.params.key
-    let stan = await stanModel.findAll({
-        where: {
-            [Op.or]: [
-                { stanID: { [Op.substring]: keyword } },
-                { nama_stan: { [Op.substring]: keyword } },
-                { namapemilik_stan: { [Op.substring]: keyword } },
-                { telepon: { [Op.substring]: keyword } },
-                { userID: { [Op.substring]: keyword } }
-            ]
-        }
-    })
-    return response.json({
-        success: true,
-        data: stan,
-        message: `All Stan have been loaded`
-    })
+async function findStan(req, res) {
+  try {
+    const keyword = req.params.key;
+
+    const stan = await db.user.findMany({
+      where: {
+        OR: [
+          { stanID: { contains: keyword } },
+          { nama_stan: { contains: keyword } },
+          { namapemilik_stan: { contains: keyword } },
+          { telepon: { contains: keyword } },
+          { userID: { contains: keyword } },
+        ],
+      },
+    });
+
+    res.json({
+      success: true,
+      data: stan,
+      message: 'All stan have been loaded',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.addStan = (request, response) => {
+async function addStan(req, res) {
+  try {
+    const newStan = await db.user.create({
+      data: {
+        stanID: req.body.stanID,
+        nama_stan: req.body.nama_stan,
+        namapemilik_stan: req.body.namapemilik_stan,
+        telepon: req.body.telepon,
+        userID: req.body.userID,
+      },
+    });
 
-    let newStan = {
-        stanID: request.body.stanID,
-        nama_stan: request.body.nama_stan,
-        namapemilik_stan: request.body.namapemilik_stan,
-        telepon: request.body.telepon,
-        userID: request.body.userID,
-        //role
+    res.json({
+      success: true,
+      data: newStan,
+      message: 'New stan has been inserted',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+async function updateStan(req, res) {
+  try {
+    const stanID = parseInt(req.params.id);
+
+    const updatedStan = await db.user.update({
+      where: { stanID },
+      data: {
+        nama_stan: req.body.nama_stan,
+        namapemilik_stan: req.body.namapemilik_stan,
+        email: req.body.email,
+        telepon: req.body.telepon,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Data stan has been updated',
+      data: updatedStan,
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Stan not found' });
     }
-
-    stanModel.create(newStan)
-        .then(result => {
-            return response.json({
-                success: true,
-                data: result,
-                message: `New stan has been inserted`
-            })
-        })
-        .catch(error => {
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.updateStan = (request, response) => {
-    let dataStan = {
-        nama_stan: request.body.nama_stan,
-        namapemilik_stan: request.body.nam,
-        email: request.body.email,
-        telepon: request.body.telepon,
-        // foto: request.body.foto
+async function deleteStan(req, res) {
+  try {
+    const stanID = parseInt(req.params.id);
+
+    await db.user.delete({
+      where: { stanID },
+    });
+
+    res.json({
+      success: true,
+      message: 'Data stan has been deleted',
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Stan not found' });
     }
-    let stanID = request.params.id
-
-    stanModel.update(dataSiswa, { where: { stanID: stanID } })
-        .then(result => {
-            return response.json({
-                success: true,
-                message: `Data stan has been updated`
-            })
-        })
-        .catch(error => {
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.deleteStan = (request, response) => {
-    let stanID = request.params.id
-    stanModel.destroy({ where: { stanID: stanID } })
-        .then(result => {
-            return response.json({
-                success: true,
-                message: `Data stan has been deleted`
-            })
-        })
-        .catch(error => {
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
-}
+module.exports = { getAllStan, findStan, addStan, updateStan, deleteStan };
+

@@ -1,107 +1,115 @@
-const siswaModel = require(`../models/index`).user
-const { request,response } = require("express")
-const siswa = require("../models/siswa")
-const { where } = require("sequelize")
-const Op = require(`sequelize`).Op
+const { db } = require('../config/prismaClient');
 
-exports.getAllSiswa = async (request, response) => {
-
-    let siswa = await siswaModel.findAll()
-    return response.json({
-        success: true,
-        data: siswa,
-        message: `All siswa have been loaded`
-    })
+async function getAllSiswa(req, res) {
+  try {
+    const siswa = await db.user.findMany();
+    res.json({
+      success: true,
+      data: siswa,
+      message: 'All siswa have been loaded',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.findSiswa = async (request, response) => {
-    let keyword = request.params.key
-    let siswa = await siswaModel.findAll({
-        where: {
-            [Op.or]: [
-                { siswaID: { [Op.substring]: keyword } },
-                { nama_siswa: { [Op.substring]: keyword } },
-                { alamat: { [Op.substring]: keyword } },
-                { telepon: { [Op.substring]: keyword } },
-                { foto: { [Op.substring]: keyword } },
-                { userID: { [Op.substring]: keyword } }
-            ]
-        }
-    })
-    return response.json({
-        success: true,
-        data: siswa,
-        message: `All Siswa have been loaded`
-    })
+async function findSiswa(req, res) {
+  try {
+    const keyword = req.params.key;
+
+    const siswa = await db.user.findMany({
+      where: {
+        OR: [
+          { siswaID: { contains: keyword } },
+          { nama_siswa: { contains: keyword } },
+          { alamat: { contains: keyword } },
+          { telepon: { contains: keyword } },
+          { foto: { contains: keyword } },
+          { userID: { contains: keyword } },
+        ],
+      },
+    });
+
+    res.json({
+      success: true,
+      data: siswa,
+      message: 'All Siswa have been loaded',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.addSiswa = (request, response) => {
+async function addSiswa(req, res) {
+  try {
+    const newSiswa = await db.user.create({
+      data: {
+        username: req.body.username,
+        password: req.body.password,
+        nama_siswa: req.body.nama_siswa,
+        alamat: req.body.alamat,
+        email: req.body.email,
+        telepon: req.body.telepon,
+        foto: req.body.foto,
+      },
+    });
 
-    let newSiswa = {
-        username: request.body.username,
-        password: request.body.password,
-        nama_siswa: request.body.nama_siswa,
-        alamat: request.body.alamat,
-        email: request.body.email,
-        telepon: request.body.telepon,
-        foto: request.body.foto
-        //role
+    res.json({
+      success: true,
+      data: newSiswa,
+      message: 'New siswa has been inserted',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+async function updateSiswa(req, res) {
+  try {
+    const siswaID = parseInt(req.params.id);
+
+    const updatedSiswa = await db.user.update({
+      where: { siswaID },
+      data: {
+        nama_siswa: req.body.nama_siswa,
+        alamat: req.body.alamat,
+        email: req.body.email,
+        telepon: req.body.telepon,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Data siswa has been updated',
+      data: updatedSiswa,
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Siswa not found' });
     }
-
-    siswaModel.create(newSiswa)
-        .then(result => {
-            return response.json({
-                success: true,
-                data: result,
-                message: `New siswa has been inserted`
-            })
-        })
-        .catch(error => {
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.updateSiswa = (request, response) => {
-    let dataSiswa = {
-        nama_siswa: request.body.nama_siswa,
-        alamat: request.body.alamat,
-        email: request.body.email,
-        telepon: request.body.telepon,
-        // foto: request.body.foto
+async function deleteSiswa(req, res) {
+  try {
+    const siswaID = parseInt(req.params.id);
+
+    await db.user.delete({
+      where: { siswaID },
+    });
+
+    res.json({
+      success: true,
+      message: 'Data siswa has been deleted',
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Siswa not found' });
     }
-    let siswaID = request.params.id
-
-    siswaModel.update(dataSiswa, { where: { siswaID: siswaID } })
-        .then(result => {
-            return response.json({
-                success: true,
-                message: `Data user has been updated`
-            })
-        })
-        .catch(error => {
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-exports.deleteSiswa = (request, response) => {
-    let siswaID = request.params.id
-    siswaModel.destroy({ where: { siswaID: siswaID } })
-        .then(result => {
-            return response.json({
-                success: true,
-                message: `Data siswa has been deleted`
-            })
-        })
-        .catch(error => {
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
-}
+module.exports = { getAllSiswa, findSiswa, addSiswa, updateSiswa, deleteSiswa };
+

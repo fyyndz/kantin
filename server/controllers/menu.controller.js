@@ -1,9 +1,8 @@
-const menuModel = require('../models/menu');
-const { Op } = require('sequelize');
+const { db } = require('../config/prismaClient');
 
-exports.getAllMenu = async (req, res) => {
+async function getAllMenu(req, res) {
     try {
-        const menus = await menuModel.findAll();
+        const menus = await db.menu.findMany();
         res.json({
             success: true,
             data: menus
@@ -14,17 +13,49 @@ exports.getAllMenu = async (req, res) => {
             message: error.message
         });
     }
-};
+}
 
-exports.getMenuById = async (req, res) => {
+async function addMenu(req, res) {
     try {
-        const menu = await menuModel.findByPk(req.params.id);
+        const { nama_makanan, harga, jenis, foto, deskripsi, stanID } = req.body;
+
+        const newMenu = await db.menu.create({
+            data: {
+                nama_makanan,
+                harga,
+                jenis,
+                foto,
+                deskripsi,
+                stanID
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            data: newMenu,
+            message: 'New menu item has been added successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+async function getMenuById(req, res) {
+    try {
+        const menu = await db.menu.findUnique({
+            where: { menuID: parseInt(req.params.id) }
+        });
+
         if (!menu) {
             return res.status(404).json({
                 success: false,
                 message: 'Menu not found'
             });
         }
+
         res.json({
             success: true,
             data: menu
@@ -35,19 +66,20 @@ exports.getMenuById = async (req, res) => {
             message: error.message
         });
     }
-};
+}
 
-exports.findMenu = async (req, res) => {
+async function findMenu(req, res) {
     try {
         const keyword = req.params.key;
-        const menus = await menuModel.findAll({
+        const menus = await db.menu.findMany({
             where: {
-                [Op.or]: [
-                    { nama_makanan: { [Op.substring]: keyword } },
-                    { deskripsi: { [Op.substring]: keyword } }
+                OR: [
+                    { nama_makanan: { contains: keyword, mode: 'insensitive' } },
+                    { deskripsi: { contains: keyword, mode: 'insensitive' } }
                 ]
             }
         });
+
         res.json({
             success: true,
             data: menus
@@ -58,19 +90,21 @@ exports.findMenu = async (req, res) => {
             message: error.message
         });
     }
-};
+}
 
-exports.createMenu = async (req, res) => {
+async function createMenu(req, res) {
     try {
         const { nama_makanan, harga, jenis, foto, deskripsi, stanID } = req.body;
-        
-        const newMenu = await menuModel.create({
-            nama_makanan,
-            harga,
-            jenis,
-            foto,
-            deskripsi,
-            stanID
+
+        const newMenu = await db.menu.create({
+            data: {
+                nama_makanan,
+                harga,
+                jenis,
+                foto,
+                deskripsi,
+                stanID
+            }
         });
 
         res.status(201).json({
@@ -83,33 +117,22 @@ exports.createMenu = async (req, res) => {
             message: error.message
         });
     }
-};
+}
 
-exports.updateMenu = async (req, res) => {
+async function updateMenu(req, res) {
     try {
         const { nama_makanan, harga, jenis, foto, deskripsi, stanID } = req.body;
-        
-        const updated = await menuModel.update({
-            nama_makanan,
-            harga,
-            jenis,
-            foto,
-            deskripsi,
-            stanID
-        }, {
-            where: { menuID: req.params.id }
-        });
+        const menuID = parseInt(req.params.id);
 
-        if (updated[0] === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Menu not found'
-            });
-        }
+        const updatedMenu = await db.menu.update({
+            where: { menuID },
+            data: { nama_makanan, harga, jenis, foto, deskripsi, stanID }
+        });
 
         res.json({
             success: true,
-            message: 'Menu updated successfully'
+            message: 'Menu updated successfully',
+            data: updatedMenu
         });
     } catch (error) {
         res.status(500).json({
@@ -117,20 +140,15 @@ exports.updateMenu = async (req, res) => {
             message: error.message
         });
     }
-};
+}
 
-exports.deleteMenu = async (req, res) => {
+async function deleteMenu(req, res) {
     try {
-        const deleted = await menuModel.destroy({
-            where: { menuID: req.params.id }
-        });
+        const menuID = parseInt(req.params.id);
 
-        if (!deleted) {
-            return res.status(404).json({
-                success: false,
-                message: 'Menu not found'
-            });
-        }
+        await db.menu.delete({
+            where: { menuID }
+        });
 
         res.json({
             success: true,
@@ -142,4 +160,7 @@ exports.deleteMenu = async (req, res) => {
             message: error.message
         });
     }
-};
+}
+
+module.exports = { getAllMenu, getMenuById, findMenu, createMenu, updateMenu, deleteMenu };
+

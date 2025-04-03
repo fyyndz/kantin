@@ -1,124 +1,121 @@
-/** load model for `users` table */
-const userModel = require(`../models/index`).user
-const md5 = require(`md5`)
-/** load Operation from Sequelize */
-const Op = require(`sequelize`).Op
+const { db } = require("../config/prismaClient");
+const md5 = require("md5");
 
-/** create function for read all data */
-exports.getAllUser = async (request, response) => {
-    /** call findAll() to get all data */
-    let users = await userModel.findAll()
-    return response.json({
-        success: true,
-        data: users,
-        message: `All users have been loaded`
-    })
+async function getAllUser(req, res) {
+  try {
+    const users = await db.user.findMany();
+    res.json({
+      success: true,
+      data: users,
+      message: "All users have been loaded",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-/** create function for filter */
-exports.findUser = async (request, response) => {
-    /** define keyword to find data */
-    let keyword = request.params.key
-    /** call findAll() within where clause and operation
-    * to find data based on keyword */
-    let users = await userModel.findAll({
-        where: {
-            [Op.or]: [
-                { userID: { [Op.substring]: keyword } },
-                { firstname: { [Op.substring]: keyword } },
-                { lastname: { [Op.substring]: keyword } },
-                { email: { [Op.substring]: keyword } },
-                { role: { [Op.substring]: keyword } }
-            ]
-        }
-    })
-    return response.json({
-        success: true,
-        data: users,
-        message: `All Users have been loaded`
-    })
+async function findUser(req, res) {
+  try {
+    const keyword = req.params.key;
+    const users = await db.user.findMany({
+      where: {
+        OR: [
+          { userID: { contains: keyword } },
+          { firstname: { contains: keyword } },
+          { lastname: { contains: keyword } },
+          { email: { contains: keyword } },
+          { role: { contains: keyword } },
+        ],
+      },
+    });
+
+    res.json({
+      success: true,
+      data: users,
+      message: "Filtered users have been loaded",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-/** create function for add new user */
-exports.addUser = (request, response) => {
-    // return response.json(request.body)
-    /** prepare data from request */
-    let newUser = {
-        firstname: request.body.firstname,
-        lastname: request.body.lastname,
-        email: request.body.email,
-        password: md5(request.body.password),
-        role: request.body.role
+async function addUser(req, res) {
+  try {
+    const newUser = await db.user.create({
+      data: {
+        firstname: req.body.firstname,
+        lastname: req.body.lastname,
+        email: req.body.email,
+        password: md5(req.body.password),
+        role: req.body.role,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: newUser,
+      message: "New user has been inserted",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+async function updateUser(req, res) {
+  try {
+    const userID = parseInt(req.params.id);
+    const updateData = {
+      firstname: req.body.firstname,
+      lastname: req.body.lastname,
+      email: req.body.email,
+      role: req.body.role,
+    };
+
+    if (req.body.password) {
+      updateData.password = md5(req.body.password);
     }
-    /** execute inserting data to user's table */
-    userModel.create(newUser)
-        .then(result => {
-            /** if insert's process success */
-            return response.json({
-                success: true,
-                data: result,
-                message: `New user has been inserted`
-            })
-        })
-        .catch(error => {
-            /** if insert's process fail */
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
+
+    const updatedUser = await db.user.update({
+      where: { userID },
+      data: updateData,
+    });
+
+    res.json({
+      success: true,
+      data: updatedUser,
+      message: "User has been updated",
+    });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-/** create function for update user */
-exports.updateUser = (request, response) => {
-    /** prepare data that has been changed */
-    let dataUser = {
-        firstname: request.body.firstname,
-        lastname: request.body.lastname,
-        email: request.body.email,
-        role: request.body.role
+async function deleteUser(req, res) {
+  try {
+    const userID = parseInt(req.params.id);
+
+    await db.user.delete({
+      where: { userID },
+    });
+
+    res.json({
+      success: true,
+      message: "User has been deleted",
+    });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-    if (request.body.password) {
-        dataUser.password = md5(request.body.password)
-    }
-    /** define id user that will be update */
-    let userID = request.params.id
-    /** execute update data based on defined id user */
-    userModel.update(dataUser, { where: { userID: userID } })
-        .then(result => {
-            /** if update's process success */
-            return response.json({
-                success: true,
-                message: `Data user has been updated`
-            })
-        })
-        .catch(error => {
-            /** if update's process fail */
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
+    res.status(500).json({ success: false, message: error.message });
+  }
 }
 
-/** create function for delete data */
-exports.deleteUser = (request, response) => {
-    /** define id user that will be update */
-    let userID = request.params.id
-    /** execute delete data based on defined id user */
-    userModel.destroy({ where: { userID: userID } })
-        .then(result => {
-            /** if update's process success */
-            return response.json({
-                success: true,
-                message: `Data user has been deleted`
-            })
-        })
-        .catch(error => {
-            /** if update's process fail */
-            return response.json({
-                success: false,
-                message: error.message
-            })
-        })
-}
+module.exports = { getAllUser, findUser, addUser, updateUser, deleteUser };
+

@@ -1,28 +1,28 @@
-const { menu_diskon } = require('../models');
+const { db } = require('../config/prismaClient');
 
-// Get all menu discounts
-exports.getAllMenuDiskon = async (req, res) => {
+async function getAllMenuDiskon(req, res) {
   try {
-    const allMenuDiskon = await menu_diskon.findAll();
+    const allMenuDiskon = await db.menu_diskon.findMany();
     res.status(200).json(allMenuDiskon);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Get menu discount by ID or other key
-exports.findMenuDiskon = async (req, res) => {
+async function findMenuDiskon(req, res) {
   try {
-    const key = req.params.key;
-    const singleMenuDiskon = await menu_diskon.findOne({
+    const key = parseInt(req.params.key);
+
+    const singleMenuDiskon = await db.menu_diskon.findFirst({
       where: {
-        [Sequelize.Op.or]: [
+        OR: [
           { menu_diskonID: key },
           { menuID: key },
           { diskonID: key }
         ]
       }
     });
+
     if (singleMenuDiskon) {
       res.status(200).json(singleMenuDiskon);
     } else {
@@ -31,52 +31,59 @@ exports.findMenuDiskon = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Create new menu discount
-exports.addMenuDiskon = async (req, res) => {
+async function addMenuDiskon(req, res) {
   try {
-    const newMenuDiskon = await menu_diskon.create({
-      menuID: req.body.menuID,
-      diskonID: req.body.diskonID
+    const { menuID, diskonID } = req.body;
+
+    const newMenuDiskon = await db.menu_diskon.create({
+      data: {
+        menuID,
+        diskonID
+      }
     });
+
     res.status(201).json(newMenuDiskon);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Update menu discount
-exports.updateMenuDiskon = async (req, res) => {
+async function updateMenuDiskon(req, res) {
   try {
-    const menu_diskonID = req.params.id;
-    const [updated] = await menu_diskon.update(req.body, {
-      where: { menu_diskonID: menu_diskonID }
+    const menu_diskonID = parseInt(req.params.id);
+
+    const updatedMenuDiskon = await db.menu_diskon.update({
+      where: { menu_diskonID },
+      data: req.body
     });
-    if (updated) {
-      const updatedMenuDiskon = await menu_diskon.findByPk(menu_diskonID);
-      res.status(200).json(updatedMenuDiskon);
-    } else {
-      res.status(404).json({ message: 'Menu discount not found' });
-    }
+
+    res.status(200).json(updatedMenuDiskon);
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Menu discount not found' });
+    }
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Delete menu discount
-exports.deleteMenuDiskon = async (req, res) => {
+async function deleteMenuDiskon(req, res) {
   try {
-    const menu_diskonID = req.params.id;
-    const deleted = await menu_diskon.destroy({
-      where: { menu_diskonID: menu_diskonID }
+    const menu_diskonID = parseInt(req.params.id);
+
+    await db.menu_diskon.delete({
+      where: { menu_diskonID }
     });
-    if (deleted) {
-      res.status(204).json({ message: 'Menu discount deleted' });
-    } else {
-      res.status(404).json({ message: 'Menu discount not found' });
-    }
+
+    res.status(204).json({ message: 'Menu discount deleted' });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Menu discount not found' });
+    }
     res.status(500).json({ message: error.message });
   }
-};
+}
+
+module.exports = { getAllMenuDiskon, findMenuDiskon, addMenuDiskon, updateMenuDiskon, deleteMenuDiskon };
+

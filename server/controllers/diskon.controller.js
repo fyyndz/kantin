@@ -1,23 +1,22 @@
-const { diskon } = require('../models');
+const { db } = require('../config/prismaClient');
+const { Prisma } = require('@prisma/client');
 
-// Get all discounts
-exports.getAllDiskon = async (req, res) => {
+async function getAllDiskon(req, res) {
   try {
-    const allDiskon = await diskon.findAll();
+    const allDiskon = await db.diskon.findMany();
     res.status(200).json(allDiskon);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Get discount by ID or other key
-exports.findDiskon = async (req, res) => {
+async function findDiskon(req, res) {
   try {
     const key = req.params.key;
-    const singleDiskon = await diskon.findOne({
+    const singleDiskon = await db.diskon.findFirst({
       where: {
-        [Sequelize.Op.or]: [
-          { diskonID: key },
+        OR: [
+          { diskonID: isNaN(key) ? undefined : parseInt(key) },
           { nama_diskon: key }
         ]
       }
@@ -30,55 +29,54 @@ exports.findDiskon = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Create new discount
-exports.addDiskon = async (req, res) => {
+async function addDiskon(req, res) {
   try {
-    const newDiskon = await diskon.create({
-      nama_diskon: req.body.nama_diskon,
-      persentase_diskon: req.body.persentase_diskon,
-      tanggal_awal: req.body.tanggal_awal,
-      tanggal_akhir: req.body.tanggal_akhir,
-      stanID: req.body.stanID
+    const { nama_diskon, persentase_diskon, tanggal_awal, tanggal_akhir, stanID } = req.body;
+
+    const newDiskon = await db.diskon.create({
+      data: {
+        nama_diskon,
+        persentase_diskon,
+        tanggal_awal: new Date(tanggal_awal),
+        tanggal_akhir: new Date(tanggal_akhir),
+        stanID
+      }
     });
     res.status(201).json(newDiskon);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Update discount
-exports.updateDiskon = async (req, res) => {
+async function updateDiskon(req, res) {
   try {
-    const diskonID = req.params.id;
-    const [updated] = await diskon.update(req.body, {
-      where: { diskonID: diskonID }
+    const diskonID = parseInt(req.params.id);
+    const updatedDiskon = await db.diskon.update({
+      where: { diskonID },
+      data: req.body
     });
-    if (updated) {
-      const updatedDiskon = await diskon.findByPk(diskonID);
-      res.status(200).json(updatedDiskon);
-    } else {
-      res.status(404).json({ message: 'Discount not found' });
-    }
+    res.status(200).json(updatedDiskon);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ message: 'Discount not found' });
+    }
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Delete discount
-exports.deleteDiskon = async (req, res) => {
+async function deleteDiskon(req, res) {
   try {
-    const diskonID = req.params.id;
-    const deleted = await diskon.destroy({
-      where: { diskonID: diskonID }
-    });
-    if (deleted) {
-      res.status(204).json({ message: 'Discount deleted' });
-    } else {
-      res.status(404).json({ message: 'Discount not found' });
-    }
+    const diskonID = parseInt(req.params.id);
+    await db.diskon.delete({ where: { diskonID } });
+    res.status(204).json({ message: 'Discount deleted' });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ message: 'Discount not found' });
+    }
     res.status(500).json({ message: error.message });
   }
-};
+}
+
+module.exports = { getAllDiskon, findDiskon, addDiskon, updateDiskon, deleteDiskon };

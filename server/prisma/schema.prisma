@@ -119,4 +119,3 @@ model MenuDiskon {
 
   @@id([menuID, diskonID]) 
 }
-

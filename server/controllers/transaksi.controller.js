@@ -1,28 +1,27 @@
-const { transaksi } = require('../models');
+const { db } = require('../config/prismaClient');
 
-// Get all transactions
-exports.getAllTransaksi = async (req, res) => {
+async function getAllTransaksi(req, res) {
   try {
-    const allTransaksi = await transaksi.findAll();
+    const allTransaksi = await db.transaksi.findMany();
     res.status(200).json(allTransaksi);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Get transaction by ID or other key
-exports.findTransaksi = async (req, res) => {
+async function findTransaksi(req, res) {
   try {
     const key = req.params.key;
-    const singleTransaksi = await transaksi.findOne({
+    const singleTransaksi = await db.transaksi.findFirst({
       where: {
-        [Sequelize.Op.or]: [
+        OR: [
           { transaksiID: key },
           { siswaID: key },
-          { stanID: key }
-        ]
-      }
+          { stanID: key },
+        ],
+      },
     });
+
     if (singleTransaksi) {
       res.status(200).json(singleTransaksi);
     } else {
@@ -31,54 +30,59 @@ exports.findTransaksi = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Create new transaction
-exports.addTransaksi = async (req, res) => {
+async function addTransaksi(req, res) {
   try {
-    const newTransaksi = await transaksi.create({
-      tanggal: req.body.tanggal,
-      stanID: req.body.stanID,
-      siswaID: req.body.siswaID,
-      status: req.body.status
+    const newTransaksi = await db.transaksi.create({
+      data: {
+        tanggal: req.body.tanggal,
+        stanID: req.body.stanID,
+        siswaID: req.body.siswaID,
+        status: req.body.status,
+      },
     });
+
     res.status(201).json(newTransaksi);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Update transaction
-exports.updateTransaksi = async (req, res) => {
+async function updateTransaksi(req, res) {
   try {
-    const transaksiID = req.params.id;
-    const [updated] = await transaksi.update(req.body, {
-      where: { transaksiID: transaksiID }
+    const transaksiID = parseInt(req.params.id);
+
+    const updatedTransaksi = await db.transaksi.update({
+      where: { transaksiID },
+      data: req.body,
     });
-    if (updated) {
-      const updatedTransaksi = await transaksi.findByPk(transaksiID);
-      res.status(200).json(updatedTransaksi);
-    } else {
-      res.status(404).json({ message: 'Transaction not found' });
-    }
+
+    res.status(200).json(updatedTransaksi);
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
     res.status(500).json({ message: error.message });
   }
-};
+}
 
-// Delete transaction
-exports.deleteTransaksi = async (req, res) => {
+async function deleteTransaksi(req, res) {
   try {
-    const transaksiID = req.params.id;
-    const deleted = await transaksi.destroy({
-      where: { transaksiID: transaksiID }
+    const transaksiID = parseInt(req.params.id);
+
+    await db.transaksi.delete({
+      where: { transaksiID },
     });
-    if (deleted) {
-      res.status(204).json({ message: 'Transaction deleted' });
-    } else {
-      res.status(404).json({ message: 'Transaction not found' });
-    }
+
+    res.status(204).json({ message: 'Transaction deleted' });
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
     res.status(500).json({ message: error.message });
   }
-};
+}
+
+module.exports = { getAllTransaksi, findTransaksi, addTransaksi, updateTransaksi, deleteTransaksi };
+
