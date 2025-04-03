@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { db } = require('../config/prismaClient');
-require('dotenv').config()
+require('dotenv').config();
 
 async function login(req, res) {
     try {
@@ -49,7 +49,14 @@ async function login(req, res) {
 
 async function register(req, res) {
     try {
-        const { email, password, role } = req.body;
+        const { firstname, lastname, email, password, role } = req.body;
+
+        if (!firstname || !lastname || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
+            });
+        }
 
         const existingUser = await db.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -63,9 +70,11 @@ async function register(req, res) {
 
         const newUser = await db.user.create({
             data: {
+                firstname,
+                lastname,
                 email,
                 password: hashedPassword,
-                role
+                role: role || "siswa", 
             }
         });
 
@@ -86,4 +95,5 @@ async function register(req, res) {
 
 module.exports = {
   login, register
-}
+};
+

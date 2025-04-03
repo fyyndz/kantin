@@ -13,7 +13,7 @@ model User {
   lastname  String
   email     String  @unique
   password  String
-  role      Role
+  role      Role    @default(siswa)
 
   siswa     Siswa?
   stan      Stan?

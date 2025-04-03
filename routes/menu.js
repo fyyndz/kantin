@@ -1,16 +1,17 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const menuController = require('../controllers/menu.controller');
+const menuController = require("../controllers/menu.controller");
+const adminStanMiddleware = require("../middleware/middleware");
 
-router.get('/', menuController.getAllMenu);
+router.get("/", menuController.getAllMenu);
 
-router.get('/search/:key', menuController.findMenu);
+router.get("/search/:key", menuController.findMenu);
 
-router.post('/', menuController.createMenu);
+router.post("/", adminStanMiddleware, menuController.createMenu);
 
-router.put('/:id', menuController.updateMenu);
+router.put("/:id", adminStanMiddleware, menuController.updateMenu);
 
-router.delete('/:id', menuController.deleteMenu);
+router.delete("/:id", adminStanMiddleware, menuController.deleteMenu);
 
 module.exports = router;

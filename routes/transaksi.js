@@ -1,16 +1,17 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const transaksiController = require('../controllers/transaksi.controller');
+const transaksiController = require("../controllers/transaksi.controller");
+const adminStanMiddleware = require("../middleware/middleware");
 
-router.get('/', transaksiController.getAllTransaksi);
+router.get("/", transaksiController.getAllTransaksi);
 
-router.get('/search/:key', transaksiController.findTransaksi);
+router.get("/search/:key", transaksiController.findTransaksi);
 
-router.post('/', transaksiController.addTransaksi);
+router.post("/", adminStanMiddleware, transaksiController.addTransaksi);
 
-router.put('/:id', transaksiController.updateTransaksi);
+router.put("/:id", adminStanMiddleware, transaksiController.updateTransaksi);
 
-router.delete('/:id', transaksiController.deleteTransaksi);
+router.delete("/:id", adminStanMiddleware, transaksiController.deleteTransaksi);
 
 module.exports = router;
